@@ -230,7 +230,9 @@
         while (top(state).type != "py")
           state.scopes.pop();
       }
-      offset = top(state).offset + (type == "py" ? conf.indentUnit : hangingIndent);
+      var old_offset = stream.indentation();
+      var new_offset = type == "py" ? conf.indentUnit : hangingIndent;
+      offset = old_offset + new_offset;
       if (type != "py" && !stream.match(/^(\s|#.*)*$/, false))
         align = stream.column() + 1;
       state.scopes.push({offset: offset, type: type, align: align});
@@ -320,12 +322,18 @@
         var closing = textAfter && textAfter.charAt(0) == scope.type;
         if (scope.align != null)
           return scope.align - (closing ? 1 : 0);
-        else if (closing && state.scopes.length > 1)
-          return state.scopes[state.scopes.length - 2].offset;
-        else
-          return scope.offset;
+        else {
+          for (var i = 0; i < state.scopes.length; i++) {
+            var scopeIndex = state.scopes.length - i - 1;
+            var afterChar = textAfter.charAt(i);
+            var expectedChar = state.scopes[scopeIndex].type;
+            if (afterChar != expectedChar)
+              return state.scopes[scopeIndex].offset;
+          }
+          return state.scopes[0].offset;
+        }
       },
-
+      electricChars: ")}]",
       closeBrackets: {triples: "'\""},
       lineComment: "#",
       fold: "indent"
